@@ -5,6 +5,7 @@ HOST = "0.0.0.0"
 PORT = 5555
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.bind((HOST, PORT))
 server.listen()
 
@@ -13,10 +14,10 @@ usernames = []
 
 
 def broadcast(message, sender=None):
-    for client in clients:
+    for client in clients[:]:
         if client != sender:
             try:
-                client.send(message)
+                client.sendall(message.encode())
             except:
                 remove_client(client)
 
@@ -34,18 +35,20 @@ def remove_client(client):
         except:
             pass
 
-        broadcast(f"{username} left the chat.\n".encode())
+        print(f"{username} disconnected.")
+        broadcast(f"{username} left the chat.\n")
 
 
 def handle_client(client):
     while True:
         try:
-            message = client.recv(1024)
+            message = client.recv(1024).decode()
 
             if not message:
                 break
 
-            broadcast(message, client)
+            print(message)
+            broadcast(message + "\n", client)
 
         except:
             break
@@ -60,19 +63,26 @@ def receive_connections():
     while True:
         client, address = server.accept()
 
-        client.send("USERNAME".encode())
+        client.sendall("USERNAME".encode())
         username = client.recv(1024).decode()
 
         clients.append(client)
         usernames.append(username)
 
-        print(f"{username} connected from {address}")
+        print(f"{username} joined from {address}")
 
-        client.send("Connected to the chat server!\n".encode())
+        client.sendall(
+            "Connected to the chat server!\n".encode()
+        )
 
-        broadcast(f"{username} joined the chat.\n".encode(), client)
+        broadcast(f"{username} joined the chat.\n", client)
 
-        thread = threading.Thread(target=handle_client, args=(client,))
+        thread = threading.Thread(
+            target=handle_client,
+            args=(client,)
+        )
+
+        thread.daemon = True
         thread.start()
 
 

@@ -17,13 +17,12 @@ def receive_messages():
             message = client.recv(1024).decode()
 
             if message == "USERNAME":
-                client.send(username.encode())
+                client.sendall(username.encode())
             else:
                 print(message, end="")
 
         except:
             print("\nDisconnected from server.")
-            client.close()
             break
 
 
@@ -34,7 +33,7 @@ def send_messages():
 
             if message.strip():
                 full_message = f"{username}: {message}"
-                client.send(full_message.encode())
+                client.sendall(full_message.encode())
 
         except:
             break
